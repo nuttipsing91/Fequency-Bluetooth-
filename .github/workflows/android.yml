@@ -1,0 +1,32 @@
+name: Android debug APK
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
+      - name: Verify signed APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/GeoWave_Vision_AR_V4.apk
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/GeoWave_Vision_AR_V4.apk
+      - uses: actions/upload-artifact@v4
+        id: apk
+        with:
+          name: GeoWave_Vision_AR_V4
+          path: dist/GeoWave_Vision_AR_V4.apk
+          if-no-files-found: error
+      - run: echo '[Download GeoWave Vision AR V4](${{ steps.apk.outputs.artifact-url }})' >> "$GITHUB_STEP_SUMMARY"
